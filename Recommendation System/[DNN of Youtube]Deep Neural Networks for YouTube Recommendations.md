@@ -23,7 +23,7 @@
 ![[Pasted image 20201013223757.png]]
 
 ##  2. Composition
-1. A neural network for ***candidate generation***and a neural network for ***ranking***
+1. A neural network for ***candidate generation*** and a neural network for ***ranking***
 2. candidate generation network（粗排/召回）
 	- provides broad personalizaiton via *collborative filtering*(协同过滤)
 	- utilize simple features: **ID**, **search query tokens** and **demographics**(人口统计学特征)
@@ -109,7 +109,7 @@
 2. 在candidate generation model的serving过程中，Youtube为什么不直接采用训练时的model进行预测，而是采用了一种最近邻搜索的方法？
 	- 这个问题的答案是一个经典的工程和学术做trade-off的结果，在model serving过程中对几百万个候选集逐一跑一遍模型的时间开销显然太大了，因此在通过candidate generation model得到user 和 video的embedding之后，通过最近邻搜索的方法的效率高很多。我们甚至不用把任何model inference的过程搬上服务器，只需要把user embedding和video embedding存到redis或者内存中就好了。【实际使用时应该是user embedding实时生成（个人认为是因为user query可变），video embedding离线存储好】
 	
-2. 在candidate generation model的serving过程中，Youtube为什么不直接采用训练时的model进行预测，而是采用了一种最近邻搜索的方法？
+2. Youtube的用户对新视频有偏好，那么在模型构建的过程中如何引入这个feature？
 	- 为了拟合用户对fresh content的bias，模型引入了“Example Age”这个feature，文中其实并没有精确的定义什么是example age。按照文章的说法猜测的话，会直接把sample log距离当前的时间【指的是模型训练时的时间】作为example age。比如24小时前的日志，这个example age就是24。在做模型serving的时候，不管使用那个video，会直接把这个feature设成0。大家可以仔细想一下这个做法的细节和动机，非常有意思。【个人理解：更旧的视频在训练时age值更大，对应的，拟合目标时只需要更小的权重即可。那么在serving时age置为0了，获得的结果概率就会变得更小】
 	- 这个特征的用处按我理解可以这样描述：比如某个视频点击集中在7天前（比如7天前点击率10%），训练前这个时间点点击率比较低（训练前10分钟点击率3%），模型学出来之后预测的时候把Example Age置为0去预测，预测出这个视频点击率就会更接近3%。同理如果某视频以前不火，训练前突然火了，预测的时候Example Age置为0就可以预测到更高的点击率。如果不带Example Age，模型学出来的该视频点击率更接近于这个训练区间下这个视频平均点击率。
 
